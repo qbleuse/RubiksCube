@@ -4,8 +4,11 @@ using UnityEngine;
 
 public class Rubikscube : MonoBehaviour
 {
+    private Camera mainCamera;
+
     [SerializeField] private GameObject cubeMulti = null;
     private List<GameObject> tabCube;
+    private GameObject centralPos;
     [SerializeField] private int size = 3;
     [SerializeField] private float offset = 0.5f;
     [SerializeField] private float detectEpsilon = 0.1f;
@@ -22,11 +25,17 @@ public class Rubikscube : MonoBehaviour
     //the list of cube moving when user's is holding
     private List<GameObject> movingCube;
 
+    [SerializeField] private float speed = 500;
     // Start is called before the first frame update
     void Start()
     {
+        // ============================= Cube =============================  // 
+        
+        centralPos = new GameObject();
         tabCube = new List<GameObject>();
         movingCube = new List<GameObject>();
+
+        centralPos.transform.position = new Vector3(size / 2, size / 2, size / 2);
 
         int i = 0;
         int j = 0;
@@ -54,7 +63,21 @@ public class Rubikscube : MonoBehaviour
             }
         }
 
+        //set parent of cube
+        foreach(GameObject tab in tabCube)
+        {
+            tab.transform.parent = centralPos.transform;
+        }
+
         // check face after this and hide some of this 
+
+        // ============================= Camera =============================  // 
+
+        mainCamera = Camera.main;
+
+        mainCamera.transform.position = new Vector3(size / 2, size/2, -size - 4);
+        mainCamera.transform.LookAt(centralPos.transform);
+
     }
 
     private void OnDrawGizmos()
@@ -89,6 +112,7 @@ public class Rubikscube : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+
         //Detect when there is a mouse click
         if (Input.GetMouseButton(0))
         {
@@ -99,12 +123,19 @@ public class Rubikscube : MonoBehaviour
             }
             else
             {
-                
+                if (Input.GetButton("Fire1"))
+                {
+                    float verti = Input.GetAxis("Mouse X") * speed;
+                    float hori = Input.GetAxis("Mouse Y") * speed;
+
+                    centralPos.transform.Rotate(hori * Time.deltaTime, -verti * Time.deltaTime, 0, Space.World);
+                }
             }
         }
         else
         {
             leftHolding = false;
+            movingCube.Clear();
         }
     }
 }
