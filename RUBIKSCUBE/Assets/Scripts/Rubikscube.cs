@@ -92,8 +92,8 @@ public class Rubikscube : MonoBehaviour
 
         if (Physics.Raycast(ray, out hit))
         {
-            Debug.Log(hit.normal);
-            Debug.Log(center);
+            //Debug.Log(hit.normal);
+            //Debug.Log(center);
             Plane plane = new Plane(-hit.normal, center + hit.normal * rubiksSize);
            
 
@@ -101,7 +101,7 @@ public class Rubikscube : MonoBehaviour
             {
                 if (plane.GetDistanceToPoint(gameObject.transform.position) <= detectEpsilon)
                 {
-                    Debug.Log(plane.GetDistanceToPoint(gameObject.transform.position) + "   " + gameObject.name);
+                    //Debug.Log(plane.GetDistanceToPoint(gameObject.transform.position) + "   " + gameObject.name);
                     movingCube.Add(gameObject);
                 }
             }
