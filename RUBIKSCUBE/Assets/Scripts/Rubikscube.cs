@@ -102,8 +102,6 @@ public class Rubikscube : MonoBehaviour
 
     private void OnDrawGizmos()
     {
-        //if (grabedFace != null)
-          //  Gizmos.DrawCube(grabedFace.transform.up * Vector3.Dot(grabedFace.transform.up, grabedFace.transform.position), grabedFace.transform.up * 10.0f + grabedFace.transform.right * 10.0f);
     }
 
     void GetGrabedFace()
@@ -165,33 +163,30 @@ public class Rubikscube : MonoBehaviour
             }
         }
 
-        Debug.Log(movingCube.Count);
+        oldPoint = Input.mousePosition;
     }
 
     void MoveFace()
     {
-        //Create a ray from the Mouse click position
-        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-        float dist = 0.0f;
+        Vector3 newPoint = Input.mousePosition;
 
-        if (ctrlPlane.Raycast(ray, out dist))
+        float moveRate = Vector3.Dot(Vector3.Cross(ctrlPlane.normal,movingPlane.normal), (newPoint - oldPoint));
+
+        Debug.Log(moveRate);
+
+        Vector3 planeCenter = center + movingPlane.normal * movingPlane.distance;
+
+        foreach (GameObject cube in movingCube)
         {
-            Vector3 newPoint = ray.GetPoint(dist);
-
-            float moveRate = Vector3.Dot(Vector3.Cross(ctrlPlane.normal,movingPlane.normal), (newPoint - oldPoint));
-
-            Vector3 planeCenter = center + movingPlane.normal * movingPlane.distance;
-
-            foreach (GameObject cube in movingCube)
-            {
-                Quaternion rotate       = Quaternion.AngleAxis(moveRate * faceTurnSpeed, movingPlane.normal);
-                rotate                  = Quaternion.Slerp(Quaternion.identity, rotate, Time.deltaTime);
-                cube.transform.rotation = cube.transform.rotation * rotate;
-                cube.transform.position = rotate * (cube.transform.position - planeCenter) + planeCenter;
-            }
-
-            oldPoint = newPoint;
+            Quaternion rotate       = Quaternion.AngleAxis(Mathf.Deg2Rad * faceTurnSpeed * 1.0f/(float)size, movingPlane.normal);
+            rotate                  = Quaternion.SlerpUnclamped(Quaternion.identity, rotate, Time.deltaTime * moveRate);
+            //cube.transform.localRotation = cube.transform.localRotation * rotate;
+            //Debug.Log("current : " + cube.transform.rotation + "    parent : " + cube.transform.parent.rotation); 
+            cube.transform.position = rotate * (cube.transform.position - planeCenter) + planeCenter;
         }
+
+        oldPoint = newPoint;
+       
     }
 
 
