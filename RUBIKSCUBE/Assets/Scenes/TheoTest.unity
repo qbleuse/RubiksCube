@@ -245,11 +245,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   cubeMulti: {fileID: 848868412912891136, guid: 5cf1ebdd55a1f814183afb08e68ac0d8,
     type: 3}
-  size: 9
+  size: 3
   offset: 0.5
   detectEpsilon: 0.5
   camOffset: -4
-  faceTurnSensibility: 0.01
+  faceTurnSensibility: 0.11
   faceTurnSpeed: 2500
   speed: 500
 --- !u!4 &825001502
