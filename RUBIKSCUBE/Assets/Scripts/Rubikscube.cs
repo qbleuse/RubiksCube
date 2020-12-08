@@ -12,6 +12,7 @@ public class Rubikscube : MonoBehaviour
     [SerializeField] private int size = 3;
     [SerializeField] private float offset = 0.5f;
     [SerializeField] private float detectEpsilon = 0.1f;
+    [SerializeField] private float animFinishedEpsilon = 0.1f;
     [SerializeField] private float camOffset = -4.0f;
     [SerializeField, Range(0.0f, 10.0f)] private float faceTurnSensibility = 1.0f;
 
@@ -44,6 +45,13 @@ public class Rubikscube : MonoBehaviour
 
     //the plane of the face that is moving when user is holding
     private Plane ctrlPlane;
+
+    //the coroutine running when user release a face to get it to a good place
+    private IEnumerator animCoroutine;
+
+    //boolean to know if the anmation has finished
+    private bool animRunning = false;
+
 
     [SerializeField] private float speed = 500;
     // Start is called before the first frame update
@@ -84,7 +92,7 @@ public class Rubikscube : MonoBehaviour
         }
 
         //set parent of cube
-        foreach(GameObject tab in tabCube)
+        foreach (GameObject tab in tabCube)
         {
             tab.transform.parent = centralPos.transform;
         }
@@ -102,6 +110,34 @@ public class Rubikscube : MonoBehaviour
 
     private void OnDrawGizmos()
     {
+    }
+
+    IEnumerator SetBackProperly(GameObject gameObject, Quaternion border1, Quaternion border2)
+    {
+        float angleWithBorder1 = Quaternion.Angle(gameObject.transform.rotation,border1);
+        float angleWithBorder2 = Quaternion.Angle(gameObject.transform.rotation, border2);
+        animRunning = true;
+        if (angleWithBorder1 > angleWithBorder2)
+        {
+            while (Quaternion.Angle(gameObject.transform.rotation, border2) >= animFinishedEpsilon)
+            {
+                gameObject.transform.rotation = Quaternion.Slerp(gameObject.transform.rotation, border2, Mathf.Deg2Rad * faceTurnSpeed * 1.0f/(float)size * Time.deltaTime);
+
+                yield return null;
+            }
+
+            animRunning = false;
+            yield break;
+        }
+
+        while (Quaternion.Angle(gameObject.transform.rotation, border1) >= animFinishedEpsilon)
+        {
+            gameObject.transform.rotation = Quaternion.Slerp(gameObject.transform.rotation, border1, Mathf.Deg2Rad * faceTurnSpeed * 1.0f / (float)size * Time.deltaTime);
+
+            yield return null;
+        }
+        animRunning = false;
+        yield break;
     }
 
     void GetGrabedFace()
@@ -172,21 +208,18 @@ public class Rubikscube : MonoBehaviour
 
         float moveRate = Vector3.Dot(Vector3.Cross(ctrlPlane.normal,movingPlane.normal), (newPoint - oldPoint));
 
-        Debug.Log(moveRate);
-
         Vector3 planeCenter = center + movingPlane.normal * movingPlane.distance;
 
         foreach (GameObject cube in movingCube)
         {
             Quaternion rotate       = Quaternion.AngleAxis(Mathf.Deg2Rad * faceTurnSpeed * 1.0f/(float)size, movingPlane.normal);
             rotate                  = Quaternion.SlerpUnclamped(Quaternion.identity, rotate, Time.deltaTime * moveRate);
-            //cube.transform.localRotation = cube.transform.localRotation * rotate;
+            //cube.transform.localRotation = rotate * cube.transform.localRotation;
             //Debug.Log("current : " + cube.transform.rotation + "    parent : " + cube.transform.parent.rotation); 
             cube.transform.position = rotate * (cube.transform.position - planeCenter) + planeCenter;
         }
 
         oldPoint = newPoint;
-       
     }
 
 
@@ -230,8 +263,8 @@ public class Rubikscube : MonoBehaviour
             { 
                 movingCube.Clear();
             }
-            chooseRotatePlane = false;
-            rightHolding = false;
+            chooseRotatePlane   = false;
+            rightHolding        = false;
         }
     }
 }
