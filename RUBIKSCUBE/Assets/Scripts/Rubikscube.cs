@@ -8,7 +8,6 @@ public class Rubikscube : MonoBehaviour
 
     [SerializeField] private GameObject cubeMulti = null;
     private List<GameObject> tabCube;
-    private List<GameObject> rotatePoint;
     private GameObject centralPos;
     [SerializeField] private int size = 3;
     [SerializeField] private float offset = 0.5f;
@@ -70,7 +69,6 @@ public class Rubikscube : MonoBehaviour
         centralPos  = new GameObject();
         tabCube     = new List<GameObject>();
         movingCube  = new List<GameObject>();
-        rotatePoint = new List<GameObject>();
         myRotatePoint= new GameObject();
 
         centralPos.transform.position = new Vector3(size / 2, size / 2, size / 2);
@@ -82,20 +80,6 @@ public class Rubikscube : MonoBehaviour
 
         rubiksSize = (((float)size) / 2.0f) - offset;
         center = new Vector3(rubiksSize, rubiksSize, rubiksSize);
-        
-        rotatePoint.Add(Instantiate(centralPos, new Vector3(center.x + center.x, center.y, center.z), Quaternion.identity));
-        rotatePoint[rotatePoint.Count - 1].name = "YellowRotatePoint";
-        rotatePoint.Add(Instantiate(centralPos, new Vector3(center.x - center.x, center.y, center.z), Quaternion.identity));
-        rotatePoint[rotatePoint.Count - 1].name = "WhiteRotatePoint";
-        rotatePoint.Add(Instantiate(centralPos, new Vector3(center.x , center.y + center.y, center.z), Quaternion.identity));
-        rotatePoint[rotatePoint.Count - 1].name = "OrangeRotatePoint";
-        rotatePoint.Add(Instantiate(centralPos, new Vector3(center.x, center.y - center.y, center.z), Quaternion.identity));
-        rotatePoint[rotatePoint.Count - 1].name = "RedRotatePoint";
-        rotatePoint.Add(Instantiate(centralPos, new Vector3(center.x, center.y , center.z + center.y), Quaternion.identity));
-        rotatePoint[rotatePoint.Count - 1].name = "GreenRotatePoint";
-        rotatePoint.Add(Instantiate(centralPos, new Vector3(center.x, center.y, center.z - center.y), Quaternion.identity));
-        rotatePoint[rotatePoint.Count - 1].name = "BlueRotatePoint";
-
 
         //construction of cube 
         for (; i < size ; i ++)
@@ -121,11 +105,6 @@ public class Rubikscube : MonoBehaviour
             tab.transform.parent = centralPos.transform;
         }
 
-        foreach (GameObject tab in rotatePoint)
-        {
-            tab.transform.parent = centralPos.transform;
-        }
-
         myRotatePoint.transform.parent = centralPos.transform;
         // check face after this and hide some of this 
 
@@ -144,31 +123,44 @@ public class Rubikscube : MonoBehaviour
             Gizmos.DrawWireSphere(myRotatePoint.transform.position, 0.5f);
     }
 
-    IEnumerator SetBackProperly(GameObject gameObject, Quaternion border1, Quaternion border2)
+    Quaternion GetProperOrientation()
     {
-        float angleWithBorder1 = Quaternion.Angle(gameObject.transform.rotation,border1);
-        float angleWithBorder2 = Quaternion.Angle(gameObject.transform.rotation, border2);
-        animRunning = true;
-        if (angleWithBorder1 > angleWithBorder2)
+        List<Quaternion> orientationQuaternion = new List<Quaternion>();
+        orientationQuaternion.Add(Quaternion.identity);
+        orientationQuaternion.Add(Quaternion.AngleAxis(90.0f, movingPlane.normal));
+        orientationQuaternion.Add(Quaternion.AngleAxis(-90.0f, movingPlane.normal));
+        orientationQuaternion.Add(Quaternion.AngleAxis(180.0f, movingPlane.normal));
+
+        Quaternion returnQuat = Quaternion.identity;
+        float angle = float.MaxValue;
+
+        foreach (Quaternion quaternion in orientationQuaternion)
         {
-            while (Quaternion.Angle(gameObject.transform.rotation, border2) >= animFinishedEpsilon)
+            float newAngle = Quaternion.Angle(myRotatePoint.transform.rotation, quaternion);
+            if (newAngle < angle)
             {
-                gameObject.transform.rotation = Quaternion.Slerp(gameObject.transform.rotation, border2, Mathf.Deg2Rad * faceTurnSpeed * 1.0f/(float)size * Time.deltaTime);
-
-                yield return null;
+                angle = newAngle;
+                returnQuat = quaternion;
             }
-
-            animRunning = false;
-            yield break;
         }
 
-        while (Quaternion.Angle(gameObject.transform.rotation, border1) >= animFinishedEpsilon)
-        {
-            gameObject.transform.rotation = Quaternion.Slerp(gameObject.transform.rotation, border1, Mathf.Deg2Rad * faceTurnSpeed * 1.0f / (float)size * Time.deltaTime);
+        return returnQuat;
+    }
 
+    IEnumerator SetBackProperly()
+    {
+        Quaternion properOrientation = GetProperOrientation();
+        animRunning = true;
+
+        while (Quaternion.Angle(myRotatePoint.transform.rotation, properOrientation) >= animFinishedEpsilon)
+        {
+            myRotatePoint.transform.rotation = Quaternion.Slerp(myRotatePoint.transform.rotation, properOrientation, Mathf.Deg2Rad * faceTurnSpeed * 1.0f/(float)size * Time.deltaTime);
+        
             yield return null;
         }
+        
         animRunning = false;
+        ClearParent();
         yield break;
     }
 
@@ -231,18 +223,14 @@ public class Rubikscube : MonoBehaviour
             }
         }
 
-        //set parent of cube and compare position to do it 
-        //foreach (GameObject rotPt in rotatePoint)
-        
-            GameObject rotPoint = new GameObject();
-            foreach (GameObject cub in movingCube)
-            {
-                rotPoint.transform.position += cub.transform.position;
-            }
-            rotPoint.transform.position /= movingCube.Count;
-            myRotatePoint.transform.position = rotPoint.transform.position;
-            myRotatePoint.transform.rotation = Quaternion.identity;
-        
+        myRotatePoint.transform.position = Vector3.zero;
+        myRotatePoint.transform.rotation = Quaternion.identity;
+        foreach (GameObject cub in movingCube)
+        {
+            myRotatePoint.transform.position += cub.transform.position;
+        }
+
+        myRotatePoint.transform.position /= movingCube.Count;
 
         foreach (GameObject cub in movingCube)
         {
@@ -250,6 +238,7 @@ public class Rubikscube : MonoBehaviour
         }
 
         haveRotatePointParent = true;
+
         oldPoint = Input.mousePosition;
     }
 
@@ -261,15 +250,10 @@ public class Rubikscube : MonoBehaviour
 
         Vector3 planeCenter = center + movingPlane.normal * movingPlane.distance;
 
-        //foreach (GameObject cube in movingCube)
-        //{
-            Quaternion rotate       = Quaternion.AngleAxis(Mathf.Deg2Rad * faceTurnSpeed * 1.0f/(float)size, movingPlane.normal);
-            rotate                  = Quaternion.SlerpUnclamped(Quaternion.identity, rotate, Time.deltaTime * moveRate);
+        Quaternion rotate       = Quaternion.AngleAxis(faceTurnSpeed * 1.0f/(float)size, movingPlane.normal);
+        rotate                  = Quaternion.SlerpUnclamped(Quaternion.identity, rotate, Time.deltaTime * moveRate);
 
-        //cube.transform.localRotation = cube.transform.localRotation * rotate;
-        //Debug.Log("current : " + cube.transform.rotation + "    parent : " + cube.transform.parent.rotation); 
         myRotatePoint.transform.rotation = myRotatePoint.transform.rotation * rotate;
-        //}
 
         oldPoint = newPoint;
     }
@@ -281,6 +265,8 @@ public class Rubikscube : MonoBehaviour
             cub.transform.parent = centralPos.transform;
         }
 
+        movingCube.Clear();
+        
         haveRotatePointParent = false;
     }
 
@@ -290,7 +276,7 @@ public class Rubikscube : MonoBehaviour
     {
 
         //Detect when there is a mouse click
-        if (Input.GetButton("Fire2"))
+        if (Input.GetButton("Fire2") && !animRunning)
         {
             if (!rightHolding)
             {
@@ -314,10 +300,16 @@ public class Rubikscube : MonoBehaviour
         }
         else
         {
-            if(haveRotatePointParent)
-                ClearParent();
+            if (haveRotatePointParent)
+            {
+                if (!animRunning)
+                {
+                    animCoroutine = SetBackProperly();
+                    StartCoroutine(animCoroutine);
+                }
+            }
 
-            if (Input.GetButton("Fire1"))
+            if (Input.GetButton("Fire1") && !animRunning)
             {
                 float verti = Input.GetAxis("Mouse X") * speed;
                 float hori = Input.GetAxis("Mouse Y") * speed;
@@ -325,10 +317,6 @@ public class Rubikscube : MonoBehaviour
                 centralPos.transform.Rotate(hori * Time.deltaTime, -verti * Time.deltaTime, 0, Space.World);
             }
 
-            if (movingCube.Count >= 1)
-            { 
-                movingCube.Clear();
-            }
             chooseRotatePlane   = false;
             rightHolding        = false;
         }
