@@ -328,6 +328,7 @@ MonoBehaviour:
   detectEpsilon: 0.5
   animFinishedEpsilon: 0.1
   camOffset: -4
+  shuffleNb: 10
   faceTurnSensibility: 0.11
   faceTurnSpeed: 10
   speed: 500
