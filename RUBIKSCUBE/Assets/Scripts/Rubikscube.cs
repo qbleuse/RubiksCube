@@ -14,10 +14,15 @@ public class Rubikscube : MonoBehaviour
     [SerializeField] private float detectEpsilon = 0.1f;
     [SerializeField] private float animFinishedEpsilon = 0.1f;
     [SerializeField] private float camOffset = -4.0f;
+    [SerializeField] public uint shuffleNb = 10u;
     [SerializeField, Range(0.0f, 10.0f)] private float faceTurnSensibility = 1.0f;
 
     //
     [SerializeField] private float faceTurnSpeed = 1.5f;
+
+    private bool shuffle = false;
+
+    private bool completed = false;
 
     //center of the rubiks cube
     private Vector3 center = Vector3.zero;
@@ -117,10 +122,60 @@ public class Rubikscube : MonoBehaviour
 
     }
 
+    void ShuffleCube()
+    {
+        shuffle = true;
+        // ============================= SuffleCube ========================= //
+        for (uint nb = 0; nb <= shuffleNb; nb++)
+        {
+            int random  = Random.Range(0, tabCube.Count);
+            int rand    = Random.Range(0, 2);//forward, up, right
+
+            if (rand == 1)
+                movingPlane = new Plane(tabCube[random].transform.up, tabCube[random].transform.up * Vector3.Dot(tabCube[random].transform.up, tabCube[random].transform.position));
+            else if (rand == 2)
+                movingPlane = new Plane(tabCube[random].transform.forward, tabCube[random].transform.forward * Vector3.Dot(tabCube[random].transform.forward, tabCube[random].transform.position));
+            else
+                movingPlane = new Plane(tabCube[random].transform.right, tabCube[random].transform.right * Vector3.Dot(tabCube[random].transform.right, tabCube[random].transform.position));
+
+            List<Quaternion> orientationQuaternion = new List<Quaternion>();
+            orientationQuaternion.Add(Quaternion.AngleAxis(90.0f, movingPlane.normal));
+            orientationQuaternion.Add(Quaternion.AngleAxis(-90.0f, movingPlane.normal));
+            orientationQuaternion.Add(Quaternion.AngleAxis(180.0f, movingPlane.normal));
+
+            int orientationRand = Random.Range(0, orientationQuaternion.Count);
+
+            GetCubeFromPlane();
+
+            myRotatePoint.transform.rotation = orientationQuaternion[orientationRand];
+
+            ClearParent();
+        }
+    }
+
+    void CheckCompleted()
+    {
+        foreach (GameObject cube in tabCube)
+        {
+            foreach (GameObject comparedCube in tabCube)
+            {
+                if (!(Vector3.Distance(cube.transform.forward, comparedCube.transform.forward) <= animFinishedEpsilon))
+                {
+                    completed = false;
+                    return;
+                }
+            }
+        }
+
+        completed = true;
+    }
+
     private void OnDrawGizmos()
     {
-        if (myRotatePoint)
+        if (myRotatePoint && !completed)
             Gizmos.DrawWireSphere(myRotatePoint.transform.position, 0.5f);
+        if (myRotatePoint && completed)
+            Gizmos.DrawSphere(myRotatePoint.transform.position, 0.5f);
     }
 
     Quaternion GetProperOrientation()
@@ -158,9 +213,10 @@ public class Rubikscube : MonoBehaviour
         
             yield return null;
         }
-        
+        myRotatePoint.transform.rotation = properOrientation;
         animRunning = false;
         ClearParent();
+
         yield break;
     }
 
@@ -214,6 +270,15 @@ public class Rubikscube : MonoBehaviour
     void GetMovingFace()
     {
         chooseRotatePlane = true;
+        GetCubeFromPlane();
+
+        haveRotatePointParent = true;
+
+        oldPoint = Input.mousePosition;
+    }
+
+    void GetCubeFromPlane()
+    {
         foreach (GameObject gameObject in tabCube)
         {
             float distToPlane = movingPlane.GetDistanceToPoint(gameObject.transform.position);
@@ -236,10 +301,6 @@ public class Rubikscube : MonoBehaviour
         {
             cub.transform.parent = myRotatePoint.transform;
         }
-
-        haveRotatePointParent = true;
-
-        oldPoint = Input.mousePosition;
     }
 
     void MoveFace()
@@ -274,6 +335,12 @@ public class Rubikscube : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        if (!shuffle)
+        {
+            ShuffleCube();
+        }
+
+        CheckCompleted();
 
         //Detect when there is a mouse click
         if (Input.GetButton("Fire2") && !animRunning)
