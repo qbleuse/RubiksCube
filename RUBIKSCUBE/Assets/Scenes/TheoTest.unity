@@ -331,6 +331,7 @@ MonoBehaviour:
   shuffleNb: 10
   faceTurnSensibility: 0.11
   faceTurnSpeed: 10
+  animTurnSpeed: 20
   speed: 500
 --- !u!4 &825001502
 Transform:

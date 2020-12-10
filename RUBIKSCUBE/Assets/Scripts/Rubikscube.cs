@@ -19,6 +19,7 @@ public class Rubikscube : MonoBehaviour
 
     //
     [SerializeField] private float faceTurnSpeed = 1.5f;
+    [SerializeField] private float animTurnSpeed = 1.5f;
 
     private bool shuffle = false;
 
@@ -209,7 +210,7 @@ public class Rubikscube : MonoBehaviour
 
         while (Quaternion.Angle(myRotatePoint.transform.rotation, properOrientation) >= animFinishedEpsilon)
         {
-            myRotatePoint.transform.rotation = Quaternion.Slerp(myRotatePoint.transform.rotation, properOrientation, Mathf.Deg2Rad * faceTurnSpeed * 1.0f/(float)size * Time.deltaTime);
+            myRotatePoint.transform.rotation = Quaternion.Slerp(myRotatePoint.transform.rotation, properOrientation, animTurnSpeed * 1.0f/(float)size * Time.deltaTime);
         
             yield return null;
         }
