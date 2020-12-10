@@ -340,7 +340,8 @@ public class Rubikscube : MonoBehaviour
             ShuffleCube();
         }
 
-        CheckCompleted();
+        if (!completed)
+            CheckCompleted();
 
         //Detect when there is a mouse click
         if (Input.GetButton("Fire2") && !animRunning)
