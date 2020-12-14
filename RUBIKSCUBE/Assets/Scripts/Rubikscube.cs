@@ -4,47 +4,63 @@ using UnityEngine;
 
 public class Rubikscube : MonoBehaviour
 {
+    /* MEMBER VARIABLES */
+
+    /*====================== Cube Components ======================*/
+
+    //The cube GameObject that will be spawned to make the rubiks cube (a cube with each face having a different color)
+    [SerializeField] private GameObject cubeMulti = null;
+
+    //all the cubes of the rubiks cube
+    private List<GameObject> tabCube;
+
+    //the parent of all cubes, serve as a pivot point to rotate the cube on itself.
+    private GameObject centralPos;
+
+    //the size of half of a cubeMulti
+    [SerializeField] private float offset = 0.5f;
+
+    /*====================== Camera ======================*/
+
+    //The Camera that shows the rubiks cube to the user
     private Camera mainCamera;
 
-    [SerializeField] private GameObject cubeMulti = null;
-    private List<GameObject> tabCube;
-    private GameObject centralPos;
-    [SerializeField] private int size = 3;
-    [SerializeField] private float offset = 0.5f;
-    [SerializeField] private float detectEpsilon = 0.1f;
-    [SerializeField] private float animFinishedEpsilon = 0.1f;
+    //Camera offset away from the cube (usually multiplied by size to always see the whole cube)
     [SerializeField] private float camOffset = -4.0f;
-    [SerializeField] public uint shuffleNb = 10u;
-    [SerializeField, Range(0.0f, 10.0f)] private float faceTurnSensibility = 1.0f;
 
-    //
-    [SerializeField] private float faceTurnSpeed = 1.5f;
-    [SerializeField] private float animTurnSpeed = 1.5f;
+    //Speed at which the camera rotate to
+    [SerializeField] private float speed = 500;
 
+    /*====================== UI Member ======================*/
+
+    //the number cube rot of the number of cube in the rubiks cube
+    [SerializeField] private int size = 3;
+
+    //boolean to know if the cube has been shuffled at least once (would be used in a button to shuffle the cube after completion)
     private bool shuffle = false;
 
+    //the nb of time the cube should be suffled, can be considered as a level of difficulty
+    [SerializeField] public uint shuffleNb = 10u;
+
+    //has the cube been resolved yet
     private bool completed = false;
 
-    //center of the rubiks cube
-    private Vector3 center = Vector3.zero;
+    //the max difference there should be between rotation of cubes (cause all cubes with same rotation is a completed cube)
+    [SerializeField] private float checkCompletedEpsilon = 0.1f;
+
+    /*====================== Move Face Behavior ======================*/
+
+    //the list of cube moving when user is holding
+    private List<GameObject> movingCube;
 
     //if the user's is holding the left button of the mouse
     private bool rightHolding = false;
 
+    //game object that was pointed by the mouse when right click was pressed
+    private GameObject grabedFace = null;
+
     //boolean that chooses the rotate plane
     private bool chooseRotatePlane = false;
-
-    //game object that was pointed by the mouse when right click was pressed
-    private GameObject  grabedFace = null;
-
-    //position that collide with the raycast of the movingPlane
-    private Vector3     oldPoint = Vector3.zero;
-
-    //Size of the rubiks cube from its center
-    private float       rubiksSize = 0.0f;
-
-    //the list of cube moving when user is holding
-    private List<GameObject> movingCube;
 
     //the plane of the face that is moving when user is holding
     private Plane movingPlane;
@@ -52,20 +68,39 @@ public class Rubikscube : MonoBehaviour
     //the plane of the face that is moving when user is holding
     private Plane ctrlPlane;
 
+    //The game object that moves and becomes a temporary parent of the moving cubes to move them around
+    private GameObject myRotatePoint;
+
+    //the max distance between plane and cube that is needed to be added to moving cube
+    [SerializeField] private float detectEpsilon = 0.1f;
+
+    //Used to know when the face should be moving in a direction
+    [SerializeField, Range(0.0f, 10.0f)] private float faceTurnSensibility = 1.0f;
+
+    //The speed at which the face will turn
+    [SerializeField] private float faceTurnSpeed = 1.5f;
+
+    //position that collide with the raycast of the movingPlane
+    private Vector3 oldPoint = Vector3.zero;
+
+    // check parent 
+    private bool haveRotatePointParent = false;
+
+    /*====================== Animation Behavior ======================*/
+    
+    //The difference between orientation needed and having before rotation will be considered completed
+    [SerializeField] private float animFinishedEpsilon = 0.1f;
+    
+    //The speed at which a face turn when animating
+    [SerializeField] private float animTurnSpeed = 1.5f;
+
     //the coroutine running when user release a face to get it to a good place
     private IEnumerator animCoroutine;
 
     //boolean to know if the anmation has finished
     private bool animRunning = false;
 
-
-    [SerializeField] private float speed = 500;
-
-    //
-    private GameObject myRotatePoint;
-
-    // check parent 
-    private bool haveRotatePointParent = false;
+    /* METHODS */
 
     // Start is called before the first frame update
     void Start()
@@ -83,9 +118,6 @@ public class Rubikscube : MonoBehaviour
         int j = 0;
         int k = 0;
         Vector3 pos = new Vector3(i, j, k);
-
-        rubiksSize = (((float)size) / 2.0f) - offset;
-        center = new Vector3(rubiksSize, rubiksSize, rubiksSize);
 
         //construction of cube 
         for (; i < size ; i ++)
@@ -121,6 +153,14 @@ public class Rubikscube : MonoBehaviour
         mainCamera.transform.position = new Vector3(size / 2, size/2, -size + camOffset);
         mainCamera.transform.LookAt(centralPos.transform);
 
+    }
+
+    Quaternion SimpleRotate(Quaternion inOrientation, Vector3 rotateAxis,  float rotateAngle, float slerpComponent = 1.0f)
+    {
+        Quaternion rotate = Quaternion.AngleAxis(rotateAngle, rotateAxis);
+        rotate = Quaternion.SlerpUnclamped(Quaternion.identity, rotate, Time.deltaTime * slerpComponent);
+
+        return inOrientation * rotate;
     }
 
     void ShuffleCube()
@@ -160,7 +200,7 @@ public class Rubikscube : MonoBehaviour
         {
             foreach (GameObject comparedCube in tabCube)
             {
-                if (!(Vector3.Distance(cube.transform.forward, comparedCube.transform.forward) <= animFinishedEpsilon))
+                if (!(Vector3.Distance(cube.transform.forward, comparedCube.transform.forward) <= checkCompletedEpsilon))
                 {
                     completed = false;
                     return;
@@ -311,12 +351,9 @@ public class Rubikscube : MonoBehaviour
 
         float moveRate = Vector3.Dot(Vector3.Cross(ctrlPlane.normal,movingPlane.normal), (newPoint - oldPoint));
 
-        Vector3 planeCenter = center + movingPlane.normal * movingPlane.distance;
+        Debug.Log( faceTurnSpeed * (1.0f / (float)size) * moveRate);
 
-        Quaternion rotate       = Quaternion.AngleAxis(faceTurnSpeed * 1.0f/(float)size, movingPlane.normal);
-        rotate                  = Quaternion.SlerpUnclamped(Quaternion.identity, rotate, Time.deltaTime * moveRate);
-
-        myRotatePoint.transform.rotation = myRotatePoint.transform.rotation * rotate;
+        myRotatePoint.transform.rotation = SimpleRotate(myRotatePoint.transform.rotation, movingPlane.normal, faceTurnSpeed * (1.0f / (float)size), moveRate);
 
         oldPoint = newPoint;
     }
@@ -331,6 +368,9 @@ public class Rubikscube : MonoBehaviour
         movingCube.Clear();
         
         haveRotatePointParent = false;
+
+        if (!completed)
+            CheckCompleted();
     }
 
 
@@ -342,8 +382,7 @@ public class Rubikscube : MonoBehaviour
             ShuffleCube();
         }
 
-        if (!completed)
-            CheckCompleted();
+   
 
         //Detect when there is a mouse click
         if (Input.GetButton("Fire2") && !animRunning)
