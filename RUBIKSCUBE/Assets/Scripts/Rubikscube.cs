@@ -127,7 +127,7 @@ public class Rubikscube : MonoBehaviour
     {
         shuffle = true;
         // ============================= SuffleCube ========================= //
-        for (uint nb = 0; nb <= shuffleNb; nb++)
+        for (uint nb = 0; nb < shuffleNb; nb++)
         {
             int random  = Random.Range(0, tabCube.Count);
             int rand    = Random.Range(0, 2);//forward, up, right
@@ -296,7 +296,8 @@ public class Rubikscube : MonoBehaviour
             myRotatePoint.transform.position += cub.transform.position;
         }
 
-        myRotatePoint.transform.position /= movingCube.Count;
+        if (movingCube.Count != 0.0f)
+            myRotatePoint.transform.position /= movingCube.Count;
 
         foreach (GameObject cub in movingCube)
         {
