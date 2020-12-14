@@ -30,9 +30,6 @@ public class Rubikscube : MonoBehaviour
 
     /*====================== Rotate Cube ======================*/
 
-    //Speed at which the camera rotate to
-    [SerializeField] private float speed = 500;
-
     [SerializeField] float rotAngularSpeed = 90f;
     [SerializeField] float maxRotAngleDuringOneFrame = 179f;
 
@@ -135,7 +132,10 @@ public class Rubikscube : MonoBehaviour
         movingCube  = new List<GameObject>();
         myRotatePoint= new GameObject();
 
-        centralPos.transform.position = new Vector3(size / 2, size / 2, size / 2);
+        if (size % 2 != 0)
+            centralPos.transform.position = new Vector3(size / 2, size / 2, size / 2);
+        else
+            centralPos.transform.position = new Vector3(size / 2 - offset, size / 2 - offset, size / 2 - offset);
 
         int i = 0;
         int j = 0;
@@ -239,9 +239,9 @@ public class Rubikscube : MonoBehaviour
     private void OnDrawGizmos()
     {
         if (myRotatePoint && !completed)
-            Gizmos.DrawWireSphere(myRotatePoint.transform.position, 0.5f);
+            Gizmos.DrawWireSphere(centralPos.transform.position, 0.5f);
         if (myRotatePoint && completed)
-            Gizmos.DrawSphere(myRotatePoint.transform.position, 0.5f);
+            Gizmos.DrawSphere(centralPos.transform.position, 0.5f);
     }
 
     Quaternion GetProperOrientation()
