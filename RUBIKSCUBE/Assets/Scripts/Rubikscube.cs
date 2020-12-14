@@ -28,13 +28,21 @@ public class Rubikscube : MonoBehaviour
     //Camera offset away from the cube (usually multiplied by size to always see the whole cube)
     [SerializeField] private float camOffset = -4.0f;
 
+    /*====================== Rotate Cube ======================*/
+
     //Speed at which the camera rotate to
     [SerializeField] private float speed = 500;
+
+    [SerializeField] float rotAngularSpeed = 90f;
+    [SerializeField] float maxRotAngleDuringOneFrame = 179f;
+
+    Quaternion targetOrientationQuat;
+    Vector3 previousMousePos;
 
     /*====================== UI Member ======================*/
 
     //the number cube rot of the number of cube in the rubiks cube
-    [SerializeField] private int size = 3;
+    [SerializeField] public int size = 3;
 
     //boolean to know if the cube has been shuffled at least once (would be used in a button to shuffle the cube after completion)
     private bool shuffle = false;
@@ -47,6 +55,9 @@ public class Rubikscube : MonoBehaviour
 
     //the max difference there should be between rotation of cubes (cause all cubes with same rotation is a completed cube)
     [SerializeField] private float checkCompletedEpsilon = 0.1f;
+
+    [SerializeField] private GameObject levelManager;
+    private UImanager uiManager;
 
     /*====================== Move Face Behavior ======================*/
 
@@ -103,10 +114,22 @@ public class Rubikscube : MonoBehaviour
     /* METHODS */
 
     // Start is called before the first frame update
+    private void Awake()
+    {
+        //uiManager = GameObject.FindObjectOfType<UImanager>();
+        //
+        //size = uiManager.GetSaveSize();
+        //shuffleNb = uiManager.GetSaveShuflle();
+    }
     void Start()
     {
+        if(PlayerPrefs.HasKey("Size"))
+            size = (int)PlayerPrefs.GetFloat("Size");
+        if (PlayerPrefs.HasKey("Shuffle"))
+            shuffleNb = (uint) PlayerPrefs.GetFloat("Shuffle");
+
         // ============================= Cube =============================  // 
-        
+
         centralPos  = new GameObject();
         tabCube     = new List<GameObject>();
         movingCube  = new List<GameObject>();
@@ -153,6 +176,8 @@ public class Rubikscube : MonoBehaviour
         mainCamera.transform.position = new Vector3(size / 2, size/2, -size + camOffset);
         mainCamera.transform.LookAt(centralPos.transform);
 
+        targetOrientationQuat = centralPos.transform.rotation;
+        previousMousePos = Input.mousePosition;
     }
 
     Quaternion SimpleRotate(Quaternion inOrientation, Vector3 rotateAxis,  float rotateAngle, float slerpComponent = 1.0f)
@@ -351,8 +376,6 @@ public class Rubikscube : MonoBehaviour
 
         float moveRate = Vector3.Dot(Vector3.Cross(ctrlPlane.normal,movingPlane.normal), (newPoint - oldPoint));
 
-        Debug.Log( faceTurnSpeed * (1.0f / (float)size) * moveRate);
-
         myRotatePoint.transform.rotation = SimpleRotate(myRotatePoint.transform.rotation, movingPlane.normal, faceTurnSpeed * (1.0f / (float)size), moveRate);
 
         oldPoint = newPoint;
@@ -382,7 +405,7 @@ public class Rubikscube : MonoBehaviour
             ShuffleCube();
         }
 
-   
+
 
         //Detect when there is a mouse click
         if (Input.GetButton("Fire2") && !animRunning)
@@ -418,16 +441,22 @@ public class Rubikscube : MonoBehaviour
                 }
             }
 
+            Vector3 mouseMove = Input.mousePosition - previousMousePos;
+
             if (Input.GetButton("Fire1") && !animRunning)
             {
-                float verti = Input.GetAxis("Mouse X") * speed;
-                float hori = Input.GetAxis("Mouse Y") * speed;
+                Vector3 rotAxis = new Vector3(mouseMove.y, -mouseMove.x, 0);
+                float rotAngle = rotAngularSpeed / maxRotAngleDuringOneFrame;
+                Quaternion rotQ = Quaternion.AngleAxis(rotAngle, rotAxis);
 
-                centralPos.transform.Rotate(hori * Time.deltaTime, -verti * Time.deltaTime, 0, Space.World);
+                targetOrientationQuat = rotQ * targetOrientationQuat;
             }
 
-            chooseRotatePlane   = false;
-            rightHolding        = false;
+            centralPos.transform.rotation = targetOrientationQuat;
+            previousMousePos = Input.mousePosition;
+
+            chooseRotatePlane = false;
+            rightHolding = false;
         }
     }
 }
