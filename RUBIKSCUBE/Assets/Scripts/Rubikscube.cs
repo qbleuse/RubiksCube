@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class Rubikscube : MonoBehaviour
 {
@@ -27,6 +28,13 @@ public class Rubikscube : MonoBehaviour
 
     //Camera offset away from the cube (usually multiplied by size to always see the whole cube)
     [SerializeField] private float camOffset = -4.0f;
+
+    // zoom speed 
+    [SerializeField] private float zoomSpeed = 100;
+
+    // limit zoom
+    private float limitZoom = 4.5f;
+    private Vector3 savePosCam;
 
     /*====================== Rotate Cube ======================*/
 
@@ -55,6 +63,8 @@ public class Rubikscube : MonoBehaviour
 
     [SerializeField] private GameObject levelManager;
     private UImanager uiManager;
+
+    [SerializeField] private Text youwin = null;
 
     /*====================== Move Face Behavior ======================*/
 
@@ -111,16 +121,12 @@ public class Rubikscube : MonoBehaviour
     /* METHODS */
 
     // Start is called before the first frame update
-    private void Awake()
-    {
-        //uiManager = GameObject.FindObjectOfType<UImanager>();
-        //
-        //size = uiManager.GetSaveSize();
-        //shuffleNb = uiManager.GetSaveShuflle();
-    }
     void Start()
     {
-        if(PlayerPrefs.HasKey("Size"))
+
+        youwin.enabled = false;
+
+        if (PlayerPrefs.HasKey("Size"))
             size = (int)PlayerPrefs.GetFloat("Size");
         if (PlayerPrefs.HasKey("Shuffle"))
             shuffleNb = (uint) PlayerPrefs.GetFloat("Shuffle");
@@ -175,6 +181,8 @@ public class Rubikscube : MonoBehaviour
 
         mainCamera.transform.position = new Vector3(size / 2, size/2, -size + camOffset);
         mainCamera.transform.LookAt(centralPos.transform);
+
+        savePosCam = mainCamera.transform.position;
 
         targetOrientationQuat = centralPos.transform.rotation;
         previousMousePos = Input.mousePosition;
@@ -458,5 +466,23 @@ public class Rubikscube : MonoBehaviour
             chooseRotatePlane = false;
             rightHolding = false;
         }
+
+        // completed ! text activate
+        if (completed)
+            youwin.enabled = true;
+
+        // zoom camera
+        if (Input.GetAxis("Mouse ScrollWheel") < 0)
+        {
+            if(savePosCam.z - limitZoom < mainCamera.transform.position.z)
+                mainCamera.transform.position -= new Vector3(0, 0, zoomSpeed * Time.deltaTime);
+        }
+
+        if (Input.GetAxis("Mouse ScrollWheel") > 0)
+        {
+            if (savePosCam.z + limitZoom > mainCamera.transform.position.z)
+                mainCamera.transform.position += new Vector3(0, 0, zoomSpeed * Time.deltaTime);
+        }
     }
+
 }

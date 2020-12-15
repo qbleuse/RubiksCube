@@ -7,10 +7,10 @@ using UnityEngine.UI;
 public class UImanager : MonoBehaviour
 {
     [SerializeField] private GameObject myCube;
-    [SerializeField] private Slider sliderShuffle;
-    [SerializeField] private Slider sliderSize;
-    [SerializeField] private Text sizeText;
-    [SerializeField] private Text ShuffleText;
+    [SerializeField] private Slider sliderShuffle = null;
+    [SerializeField] private Slider sliderSize = null;
+    [SerializeField] private Text sizeText = null;
+    [SerializeField] private Text ShuffleText = null;
 
     private uint saveShuffleNb = 50;
     private int saveSize = 3;
