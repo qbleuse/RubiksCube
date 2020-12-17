@@ -883,7 +883,7 @@ MonoBehaviour:
   offset: 0.5
   camOffset: -4
   zoomSpeed: 100
-  rotAngularSpeed: 180
+  rotAngularSpeed: 300
   maxRotAngleDuringOneFrame: 179
   size: 3
   shuffleNb: 10
