@@ -5,6 +5,9 @@ using UnityEngine.UI;
 
 public class Rubikscube : MonoBehaviour
 {
+    #region MEMBER_VARIABLES
+
+
     /* MEMBER VARIABLES */
 
     /*====================== Cube Components ======================*/
@@ -104,6 +107,7 @@ public class Rubikscube : MonoBehaviour
     private IEnumerator animCoroutine;
 
     private bool animRunning = false;
+    #endregion
 
     /* METHODS */
 
@@ -167,6 +171,7 @@ public class Rubikscube : MonoBehaviour
         Zoom();
     }
 
+    #region CAMERA
     // ============================= Camera ========================= //
 
     void CameraSetup()
@@ -218,7 +223,9 @@ public class Rubikscube : MonoBehaviour
                 mainCamera.transform.position += new Vector3(0, 0, zoomSpeed * Time.deltaTime);
         }
     }
+    #endregion
 
+    #region COMPLETION
     // ============================= Completion Check ========================= //
 
     void CheckCompleted()
@@ -238,7 +245,9 @@ public class Rubikscube : MonoBehaviour
         completed = true;
     }
 
+    #endregion
 
+    #region SETUP_CUBE
     // ============================= Setup Cube ========================= //
 
     void CreateCube()
@@ -306,6 +315,9 @@ public class Rubikscube : MonoBehaviour
         }
     }
 
+    #endregion
+
+    #region MOVE_FACE
     /*====================== Move Face Behavior ======================*/
 
     void MovingFaceBehavior()
@@ -450,6 +462,9 @@ public class Rubikscube : MonoBehaviour
             CheckCompleted();
     }
 
+    #endregion
+
+    #region ANIMATION
     /*====================== Animation Behavior ======================*/
 
     Quaternion GetProperOrientation()
@@ -498,7 +513,5 @@ public class Rubikscube : MonoBehaviour
         yield break;
     }
 
-    /*====================== End Animation Behavior ======================*/
-
-
+    #endregion
 }
