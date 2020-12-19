@@ -5,6 +5,9 @@ using UnityEngine.UI;
 
 public class Rubikscube : MonoBehaviour
 {
+    #region MEMBER_VARIABLES
+
+
     /* MEMBER VARIABLES */
 
     /*====================== Cube Components ======================*/
@@ -23,7 +26,6 @@ public class Rubikscube : MonoBehaviour
 
     /*====================== Camera ======================*/
 
-    //The Camera that shows the rubiks cube to the user
     private Camera mainCamera;
 
     //Camera offset away from the cube (usually multiplied by size to always see the whole cube)
@@ -55,7 +57,6 @@ public class Rubikscube : MonoBehaviour
     //the nb of time the cube should be suffled, can be considered as a level of difficulty
     [SerializeField] public uint shuffleNb = 10u;
 
-    //has the cube been resolved yet
     private bool completed = false;
 
     //the max difference there should be between rotation of cubes (cause all cubes with same rotation is a completed cube)
@@ -71,19 +72,16 @@ public class Rubikscube : MonoBehaviour
     //the list of cube moving when user is holding
     private List<GameObject> movingCube;
 
-    //if the user's is holding the left button of the mouse
     private bool rightHolding = false;
 
-    //game object that was pointed by the mouse when right click was pressed
     private GameObject grabedFace = null;
 
-    //boolean that chooses the rotate plane
     private bool chooseRotatePlane = false;
 
     //the plane of the face that is moving when user is holding
     private Plane movingPlane;
 
-    //the plane of the face that is moving when user is holding
+    //the plane of the grabedface
     private Plane ctrlPlane;
 
     //The game object that moves and becomes a temporary parent of the moving cubes to move them around
@@ -92,64 +90,175 @@ public class Rubikscube : MonoBehaviour
     //the max distance between plane and cube that is needed to be added to moving cube
     [SerializeField] private float detectEpsilon = 0.1f;
 
-    //Used to know when the face should be moving in a direction
     [SerializeField, Range(0.0f, 10.0f)] private float faceTurnSensibility = 1.0f;
 
-    //The speed at which the face will turn
     [SerializeField] private float faceTurnSpeed = 1.5f;
 
-    //position that collide with the raycast of the movingPlane
     private Vector3 oldPoint = Vector3.zero;
 
-    // check parent 
     private bool haveRotatePointParent = false;
 
     /*====================== Animation Behavior ======================*/
-    
-    //The difference between orientation needed and having before rotation will be considered completed
+
     [SerializeField] private float animFinishedEpsilon = 0.1f;
-    
-    //The speed at which a face turn when animating
+
     [SerializeField] private float animTurnSpeed = 1.5f;
 
-    //the coroutine running when user release a face to get it to a good place
     private IEnumerator animCoroutine;
 
-    //boolean to know if the anmation has finished
     private bool animRunning = false;
+    #endregion
 
     /* METHODS */
 
     // Start is called before the first frame update
     void Start()
     {
+        // ============================= UI =============================  // 
 
         youwin.enabled = false;
 
         if (PlayerPrefs.HasKey("Size"))
             size = (int)PlayerPrefs.GetFloat("Size");
         if (PlayerPrefs.HasKey("Shuffle"))
-            shuffleNb = (uint) PlayerPrefs.GetFloat("Shuffle");
+            shuffleNb = (uint)PlayerPrefs.GetFloat("Shuffle");
 
         // ============================= Cube =============================  // 
 
-        centralPos  = new GameObject();
-        tabCube     = new List<GameObject>();
-        movingCube  = new List<GameObject>();
-        myRotatePoint= new GameObject();
+        centralPos      = new GameObject();
+        tabCube         = new List<GameObject>();
+        movingCube      = new List<GameObject>();
+        myRotatePoint   = new GameObject();
 
         if (size % 2 != 0)
             centralPos.transform.position = new Vector3(size / 2, size / 2, size / 2);
         else
             centralPos.transform.position = new Vector3(size / 2 - offset, size / 2 - offset, size / 2 - offset);
 
+        CreateCube();
+
+        // ============================= Camera =============================  // 
+
+        CameraSetup();
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        if (!shuffle)
+            ShuffleCube();
+
+        if (Input.GetButton("Fire2") && !animRunning)
+            MovingFaceBehavior();
+        else
+        {
+            if (haveRotatePointParent)
+            {
+                if (!animRunning)
+                {
+                    animCoroutine = SetBackProperly();
+                    StartCoroutine(animCoroutine);
+                }
+            }
+
+            RotateCube();
+        }
+
+        // completed ! text activate
+        if (completed)
+            youwin.enabled = true;
+
+        Zoom();
+    }
+
+    #region CAMERA
+    // ============================= Camera ========================= //
+
+    void CameraSetup()
+    {
+        mainCamera = Camera.main;
+
+        mainCamera.transform.position = new Vector3(size / 2, size / 2, -size + camOffset);
+        mainCamera.transform.LookAt(centralPos.transform);
+
+        savePosCam = mainCamera.transform.position;
+
+        targetOrientationQuat = centralPos.transform.rotation;
+        previousMousePos = Input.mousePosition;
+    }
+
+    void RotateCube()
+    {
+        Vector3 mouseMove = Input.mousePosition - previousMousePos;
+
+        if (Input.GetButton("Fire1") && !animRunning)
+        {
+            Vector3 rotAxis = new Vector3(mouseMove.y, -mouseMove.x, 0);
+            float rotAngle = rotAngularSpeed / maxRotAngleDuringOneFrame;
+
+            Quaternion rotQ = Quaternion.AngleAxis(rotAngle, rotAxis);
+
+            targetOrientationQuat = rotQ * targetOrientationQuat;
+        }
+
+        centralPos.transform.rotation = targetOrientationQuat;
+        previousMousePos = Input.mousePosition;
+
+        chooseRotatePlane = false;
+        rightHolding = false;
+    }
+
+    void Zoom()
+    {
+        // zoom camera
+        if (Input.GetAxis("Mouse ScrollWheel") < 0)
+        {
+            if (savePosCam.z - limitZoom < mainCamera.transform.position.z)
+                mainCamera.transform.position -= new Vector3(0, 0, zoomSpeed * Time.deltaTime);
+        }
+
+        if (Input.GetAxis("Mouse ScrollWheel") > 0)
+        {
+            if (savePosCam.z + limitZoom > mainCamera.transform.position.z)
+                mainCamera.transform.position += new Vector3(0, 0, zoomSpeed * Time.deltaTime);
+        }
+    }
+    #endregion
+
+    #region COMPLETION
+    // ============================= Completion Check ========================= //
+
+    void CheckCompleted()
+    {
+        foreach (GameObject cube in tabCube)
+        {
+            foreach (GameObject comparedCube in tabCube)
+            {
+                if (!(Vector3.Distance(cube.transform.forward, comparedCube.transform.forward) <= checkCompletedEpsilon))
+                {
+                    completed = false;
+                    return;
+                }
+            }
+        }
+
+        completed = true;
+    }
+
+    #endregion
+
+    #region SETUP_CUBE
+    // ============================= Setup Cube ========================= //
+
+    void CreateCube()
+    {
         int i = 0;
         int j = 0;
         int k = 0;
         Vector3 pos = new Vector3(i, j, k);
 
         //construction of cube 
-        for (; i < size ; i ++)
+        for (; i < size; i++)
         {
             pos.x = i;
             for (j = 0; j < size; j++)
@@ -173,37 +282,16 @@ public class Rubikscube : MonoBehaviour
         }
 
         myRotatePoint.transform.parent = centralPos.transform;
-        // check face after this and hide some of this 
-
-        // ============================= Camera =============================  // 
-
-        mainCamera = Camera.main;
-
-        mainCamera.transform.position = new Vector3(size / 2, size/2, -size + camOffset);
-        mainCamera.transform.LookAt(centralPos.transform);
-
-        savePosCam = mainCamera.transform.position;
-
-        targetOrientationQuat = centralPos.transform.rotation;
-        previousMousePos = Input.mousePosition;
-    }
-
-    Quaternion SimpleRotate(Quaternion inOrientation, Vector3 rotateAxis,  float rotateAngle, float slerpComponent = 1.0f)
-    {
-        Quaternion rotate = Quaternion.AngleAxis(rotateAngle, rotateAxis);
-        rotate = Quaternion.SlerpUnclamped(Quaternion.identity, rotate, Time.deltaTime * slerpComponent);
-
-        return inOrientation * rotate;
     }
 
     void ShuffleCube()
     {
         shuffle = true;
-        // ============================= SuffleCube ========================= //
+
         for (uint nb = 0; nb < shuffleNb; nb++)
         {
-            int random  = Random.Range(0, tabCube.Count);
-            int rand    = Random.Range(0, 2);//forward, up, right
+            int random = Random.Range(0, tabCube.Count);
+            int rand = Random.Range(0, 2);//forward, up, right
 
             if (rand == 1)
                 movingPlane = new Plane(tabCube[random].transform.up, tabCube[random].transform.up * Vector3.Dot(tabCube[random].transform.up, tabCube[random].transform.position));
@@ -227,77 +315,46 @@ public class Rubikscube : MonoBehaviour
         }
     }
 
-    void CheckCompleted()
+    #endregion
+
+    #region MOVE_FACE
+    /*====================== Move Face Behavior ======================*/
+
+    void MovingFaceBehavior()
     {
-        foreach (GameObject cube in tabCube)
+        if (!rightHolding)// if right mouse button just been pressed get 
         {
-            foreach (GameObject comparedCube in tabCube)
+            GetGrabedFace();
+        }
+        else
+        {
+            if (!chooseRotatePlane)
             {
-                if (!(Vector3.Distance(cube.transform.forward, comparedCube.transform.forward) <= checkCompletedEpsilon))
+                if (ChooseMovingFace())
                 {
-                    completed = false;
-                    return;
+                    GetMovingFace();
                 }
             }
-        }
-
-        completed = true;
-    }
-
-    private void OnDrawGizmos()
-    {
-        if (myRotatePoint && !completed)
-            Gizmos.DrawWireSphere(centralPos.transform.position, 0.5f);
-        if (myRotatePoint && completed)
-            Gizmos.DrawSphere(centralPos.transform.position, 0.5f);
-    }
-
-    Quaternion GetProperOrientation()
-    {
-        List<Quaternion> orientationQuaternion = new List<Quaternion>();
-        orientationQuaternion.Add(Quaternion.identity);
-        orientationQuaternion.Add(Quaternion.AngleAxis(90.0f, movingPlane.normal));
-        orientationQuaternion.Add(Quaternion.AngleAxis(-90.0f, movingPlane.normal));
-        orientationQuaternion.Add(Quaternion.AngleAxis(180.0f, movingPlane.normal));
-
-        Quaternion returnQuat = Quaternion.identity;
-        float angle = float.MaxValue;
-
-        foreach (Quaternion quaternion in orientationQuaternion)
-        {
-            float newAngle = Quaternion.Angle(myRotatePoint.transform.rotation, quaternion);
-            if (newAngle < angle)
+            else
             {
-                angle = newAngle;
-                returnQuat = quaternion;
+                MoveFace();
             }
         }
-
-        return returnQuat;
     }
 
-    IEnumerator SetBackProperly()
+    Quaternion SimpleRotate(Quaternion inOrientation, Vector3 rotateAxis, float rotateAngle, float slerpComponent = 1.0f)
     {
-        Quaternion properOrientation = GetProperOrientation();
-        animRunning = true;
+        Quaternion rotate = Quaternion.AngleAxis(rotateAngle, rotateAxis);
+        rotate = Quaternion.SlerpUnclamped(Quaternion.identity, rotate, Time.deltaTime * slerpComponent);
 
-        while (Quaternion.Angle(myRotatePoint.transform.rotation, properOrientation) >= animFinishedEpsilon)
-        {
-            myRotatePoint.transform.rotation = Quaternion.Slerp(myRotatePoint.transform.rotation, properOrientation, animTurnSpeed * 1.0f/(float)size * Time.deltaTime);
-        
-            yield return null;
-        }
-        myRotatePoint.transform.rotation = properOrientation;
-        animRunning = false;
-        ClearParent();
-
-        yield break;
+        return inOrientation * rotate;
     }
 
+    /* Get the face that user was pointing the mouse at when pressing right mouse button and create the ctrlPlane with it */
     void GetGrabedFace()
     {
-        rightHolding        = true;
-        chooseRotatePlane   = false;
+        rightHolding = true;
+        chooseRotatePlane = false;
 
         //Create a ray from the Mouse click position
         Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
@@ -307,15 +364,15 @@ public class Rubikscube : MonoBehaviour
         {
             oldPoint    = hit.point;
             grabedFace  = hit.collider.gameObject;
-            ctrlPlane = new Plane(grabedFace.transform.forward, grabedFace.transform.forward * Vector3.Dot(grabedFace.transform.forward, grabedFace.transform.position));
+            ctrlPlane   = new Plane(grabedFace.transform.forward, grabedFace.transform.forward * Vector3.Dot(grabedFace.transform.forward, grabedFace.transform.position));
         }
     }
 
     bool ChooseMovingFace()
     {
         //Create a ray from the Mouse click position
-        Ray         ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-        RaycastHit  hit;
+        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+        RaycastHit hit;
 
         if (Physics.Raycast(ray, out hit))
         {
@@ -323,15 +380,16 @@ public class Rubikscube : MonoBehaviour
             if (grabDist.sqrMagnitude >= (float)size * faceTurnSensibility)
             {
 
-                oldPoint = hit.point;
-                float rightRate     = Mathf.Abs(Vector3.Dot(grabedFace.transform.up, grabDist));
-                float upRate        = Mathf.Abs(Vector3.Dot(grabedFace.transform.right, grabDist));
+                oldPoint        = hit.point;
+                float upRate    = Mathf.Abs(Vector3.Dot(grabedFace.transform.up, grabDist));
+                float rightRate = Mathf.Abs(Vector3.Dot(grabedFace.transform.right, grabDist));
 
-                if (upRate >= rightRate)
+
+                if (rightRate >= upRate)//if the user's mouse is more on the right axis then it is the up plane that moves
                 {
                     movingPlane = new Plane(grabedFace.transform.up, grabedFace.transform.up * Vector3.Dot(grabedFace.transform.up, grabedFace.transform.position));
                     return true;
-                }
+                }//else, if the user's mouse is move on th up axis, then the movingPlane is the right Plane
 
                 movingPlane = new Plane(grabedFace.transform.right, grabedFace.transform.right * Vector3.Dot(grabedFace.transform.right, grabedFace.transform.position));
                 return true;
@@ -351,6 +409,7 @@ public class Rubikscube : MonoBehaviour
         oldPoint = Input.mousePosition;
     }
 
+    /* method that populate movingCube after the movingPlane been chose and place my Rotate Point, to rotate those cubes*/
     void GetCubeFromPlane()
     {
         foreach (GameObject gameObject in tabCube)
@@ -382,11 +441,10 @@ public class Rubikscube : MonoBehaviour
     {
         Vector3 newPoint = Input.mousePosition;
 
-        float moveRate = Vector3.Dot(Vector3.Cross(ctrlPlane.normal,movingPlane.normal), (newPoint - oldPoint));
+        float moveRate                      = Vector3.Dot(Vector3.Cross(ctrlPlane.normal, movingPlane.normal), (newPoint - oldPoint));
+        myRotatePoint.transform.rotation    = SimpleRotate(myRotatePoint.transform.rotation, movingPlane.normal, faceTurnSpeed * (1.0f / (float)size), moveRate);
 
-        myRotatePoint.transform.rotation = SimpleRotate(myRotatePoint.transform.rotation, movingPlane.normal, faceTurnSpeed * (1.0f / (float)size), moveRate);
-
-        oldPoint = newPoint;
+        oldPoint        = newPoint;
     }
 
     void ClearParent()
@@ -397,92 +455,63 @@ public class Rubikscube : MonoBehaviour
         }
 
         movingCube.Clear();
-        
+
         haveRotatePointParent = false;
 
         if (!completed)
             CheckCompleted();
     }
 
+    #endregion
 
-    // Update is called once per frame
-    void Update()
+    #region ANIMATION
+    /*====================== Animation Behavior ======================*/
+
+    Quaternion GetProperOrientation()
     {
-        if (!shuffle)
+        /* list all possible roation for the face */
+        List<Quaternion> orientationQuaternion = new List<Quaternion>();
+        orientationQuaternion.Add(Quaternion.identity);
+        orientationQuaternion.Add(Quaternion.AngleAxis(90.0f, movingPlane.normal));
+        orientationQuaternion.Add(Quaternion.AngleAxis(-90.0f, movingPlane.normal));
+        orientationQuaternion.Add(Quaternion.AngleAxis(180.0f, movingPlane.normal));
+
+        Quaternion returnQuat   = Quaternion.identity;
+        float angle             = float.MaxValue;
+
+        foreach (Quaternion quaternion in orientationQuaternion)
         {
-            ShuffleCube();
-        }
-
-
-
-        //Detect when there is a mouse click
-        if (Input.GetButton("Fire2") && !animRunning)
-        {
-            if (!rightHolding)
+            float newAngle = Quaternion.Angle(myRotatePoint.transform.rotation, quaternion);
+            if (newAngle < angle)/* check for smallest angle between possible rotation and current one*/
             {
-                GetGrabedFace();
-            }
-            else
-            {
-                if (!chooseRotatePlane)
-                {
-                    if (ChooseMovingFace())
-                    {
-
-                        GetMovingFace();
-                    }
-                }
-                else
-                {
-                    MoveFace();
-                }
+                angle       = newAngle;
+                returnQuat  = quaternion;
             }
         }
-        else
-        {
-            if (haveRotatePointParent)
-            {
-                if (!animRunning)
-                {
-                    animCoroutine = SetBackProperly();
-                    StartCoroutine(animCoroutine);
-                }
-            }
 
-            Vector3 mouseMove = Input.mousePosition - previousMousePos;
-
-            if (Input.GetButton("Fire1") && !animRunning)
-            {
-                Vector3 rotAxis = new Vector3(mouseMove.y, -mouseMove.x, 0);
-                float rotAngle = rotAngularSpeed / maxRotAngleDuringOneFrame;
-                Quaternion rotQ = Quaternion.AngleAxis(rotAngle, rotAxis);
-
-                targetOrientationQuat = rotQ * targetOrientationQuat;
-            }
-
-            centralPos.transform.rotation = targetOrientationQuat;
-            previousMousePos = Input.mousePosition;
-
-            chooseRotatePlane = false;
-            rightHolding = false;
-        }
-
-        // completed ! text activate
-        if (completed)
-            youwin.enabled = true;
-
-        // zoom camera
-        if (Input.GetAxis("Mouse ScrollWheel") < 0)
-        {
-            if(savePosCam.z - limitZoom < mainCamera.transform.position.z)
-                mainCamera.transform.position -= new Vector3(0, 0, zoomSpeed * Time.deltaTime);
-        }
-
-        if (Input.GetAxis("Mouse ScrollWheel") > 0)
-        {
-            if (savePosCam.z + limitZoom > mainCamera.transform.position.z)
-                mainCamera.transform.position += new Vector3(0, 0, zoomSpeed * Time.deltaTime);
-        }
+        return returnQuat;
     }
 
+    IEnumerator SetBackProperly()
+    {
+        Quaternion properOrientation    = GetProperOrientation();
+        animRunning                     = true;
+
+        /* Slerp until between wanted rot and current rot is below epsilon */
+        while (Quaternion.Angle(myRotatePoint.transform.rotation, properOrientation) >= animFinishedEpsilon)
+        {
+            myRotatePoint.transform.rotation = Quaternion.Slerp(myRotatePoint.transform.rotation, properOrientation, animTurnSpeed * 1.0f / (float)size * Time.deltaTime);
+
+            yield return null;
+        }
+
+        myRotatePoint.transform.rotation = properOrientation;//then force the rotation to avoid drifting by quaternion.
+
+        animRunning = false;
+        ClearParent();//the movement is considered finished only when anim is finished
+
+        yield break;
+    }
+
+    #endregion
 }
