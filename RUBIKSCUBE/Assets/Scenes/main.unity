@@ -890,7 +890,7 @@ MonoBehaviour:
   checkCompletedEpsilon: 0.1
   levelManager: {fileID: 2089427181}
   youwin: {fileID: 686782140}
-  detectEpsilon: 0.5
+  detectEpsilon: 0.2
   faceTurnSensibility: 0.11
   faceTurnSpeed: 200
   animFinishedEpsilon: 1

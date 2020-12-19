@@ -54,7 +54,7 @@ Each Section will be about how to implement one the feature listed above, except
   
 - [_Cube Rotation - Making Rotation with Quaternion_](#-cube-rotation)
   
-- _Cube Face Rotation - Quaternion Imprecision Nightmare_
+- [_Cube Face Rotation - Quaternion Imprecision Nightmare_](#cube-face-rotation)
 
 ______
 
@@ -79,9 +79,9 @@ If "size" is the number of cube on a line then, there is the same number of cube
 Which means that the Rubiks Cube's nb of smaller cube is at least of (size x size x size).
 Or is it ?
 In reality, inside the Rubiks Cube, there is no smaller cube but the mechanism that permits the cube to rotate.
-Therefore we don't have to create cubes inside of the Rubiks cube, but only inside of it.
+Therefore we do not have to create cubes inside of the Rubiks cube, but only inside of it.
 
-Here's a portion of The method [CreateCube](RUBIKSCUBE/Assets/Scripts/Rubikscube.cs#118):
+Here is a portion of The method [CreateCube](RUBIKSCUBE/Assets/Scripts/Rubikscube.cs#118):
 
 ``` csharp
  void CreateCube()
@@ -123,7 +123,7 @@ And when we changed the size we get that:
 
 we have less cube than with a simple one with this method which is always appreciated and we have a cube!
 Note that by having no rotation applied to the cube the cube is already solved.
-It is thanks to the fact that each face has a different color, we don't have to do nothing to choose the color or anything.
+It is thanks to the fact that each face has a different color, we do not have to do nothing to choose the color or anything.
 
 ________
 
@@ -186,7 +186,7 @@ Now, we have a GameObject that rotate each smaller cube when we rotate it.
 Remains to rotate the point using the quaternions.
 
 We know that multiplying normalized quaternions rotates from an orientation to another, we just have to match the rotation to user's mouse movement.
-Here's the [RotateCube](RUBIKSCUBE/Assets/Scripts/Rubikscube.cs#L194):
+Here is the [RotateCube](RUBIKSCUBE/Assets/Scripts/Rubikscube.cs#L194):
 
 ````csharp
 
@@ -215,6 +215,40 @@ Here's the [RotateCube](RUBIKSCUBE/Assets/Scripts/Rubikscube.cs#L194):
 
 We choose the axis with the movement of the mouse between two frames and we rotate the point's orientation which will affect all the children.
 
-Here's the result:
+Here is the result:
 
 !["Rotate Cube"](ScreenShots/rotateGif.gif)
+
+Another reason to rotate the cube and not the camera is to make the zoom by changing just the coordinate of the position of the camera on an axis.
+Here is the [Zoom](RUBIKSCUBE/Assets/Scripts/Rubikscube.cs#L215):
+
+````csharp
+
+    void Zoom()
+    {
+        // zoom camera
+        if (Input.GetAxis("Mouse ScrollWheel") < 0)
+        {
+            if (savePosCam.z - limitZoom < mainCamera.transform.position.z)
+                mainCamera.transform.position -= new Vector3(0, 0, zoomSpeed * Time.deltaTime);
+        }
+
+        if (Input.GetAxis("Mouse ScrollWheel") > 0)
+        {
+            if (savePosCam.z + limitZoom > mainCamera.transform.position.z)
+                mainCamera.transform.position += new Vector3(0, 0, zoomSpeed * Time.deltaTime);
+        }
+    }
+
+````
+
+Once again, simple method, just moving the camera on the z axis with limitation.
+
+Here is the Zoom in game:
+
+!["Zoom Cube"](ScreenShots/zoomGif.gif)
+
+___
+
+### **_Cube Face Rotation_**
+
