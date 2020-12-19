@@ -135,7 +135,11 @@ public class Rubikscube : MonoBehaviour
         else
             centralPos.transform.position = new Vector3(size / 2 - offset, size / 2 - offset, size / 2 - offset);
 
+        centralPos.transform.rotation       = Quaternion.identity;
+        myRotatePoint.transform.rotation    = Quaternion.identity;
+
         CreateCube();
+        ShuffleCube();
 
         // ============================= Camera =============================  // 
 
@@ -146,9 +150,9 @@ public class Rubikscube : MonoBehaviour
     void Update()
     {
         if (!shuffle)
-            ShuffleCube();
+            return;
 
-        if (Input.GetButton("Fire2") && !animRunning)
+        if (Input.GetButton("Fire1") && !animRunning)
             MovingFaceBehavior();
         else
         {
@@ -191,21 +195,21 @@ public class Rubikscube : MonoBehaviour
     {
         Vector3 mouseMove = Input.mousePosition - previousMousePos;
 
-        if (Input.GetButton("Fire1") && !animRunning)
+        if (Input.GetButton("Fire2") && !animRunning)
         {
-            Vector3 rotAxis = new Vector3(mouseMove.y, -mouseMove.x, 0);
-            float rotAngle = rotAngularSpeed / maxRotAngleDuringOneFrame;
+            Vector3 rotAxis         = new Vector3(mouseMove.y, -mouseMove.x, 0);
+            float rotAngle          = rotAngularSpeed / maxRotAngleDuringOneFrame;
 
-            Quaternion rotQ = Quaternion.AngleAxis(rotAngle, rotAxis);
+            Quaternion rotQ         = Quaternion.AngleAxis(rotAngle, rotAxis);
 
-            targetOrientationQuat = rotQ * targetOrientationQuat;
+            targetOrientationQuat   = rotQ * targetOrientationQuat;
         }
 
-        centralPos.transform.rotation = targetOrientationQuat;
-        previousMousePos = Input.mousePosition;
+        centralPos.transform.rotation   = targetOrientationQuat;
+        previousMousePos                = Input.mousePosition;
 
-        chooseRotatePlane = false;
-        rightHolding = false;
+        chooseRotatePlane   = false;
+        rightHolding        = false;
     }
 
     void Zoom()
@@ -267,9 +271,7 @@ public class Rubikscube : MonoBehaviour
                 for (k = 0; k < size; k++)
                 {
                     pos.z = k;
-                    if ((pos.x < size - 1 && pos.x > 0) && (pos.y < size - 1 && pos.y > 0) && (pos.z < size - 1 && pos.z > 0))
-                    { }
-                    else
+                    if (!((pos.x < size - 1 && pos.x > 0) && (pos.y < size - 1 && pos.y > 0) && (pos.z < size - 1 && pos.z > 0)))
                         tabCube.Add(Instantiate(cubeMulti, pos, Quaternion.identity));
                 }
             }
@@ -286,7 +288,8 @@ public class Rubikscube : MonoBehaviour
 
     void ShuffleCube()
     {
-        shuffle = true;
+ 
+        completed   = false;
 
         for (uint nb = 0; nb < shuffleNb; nb++)
         {
@@ -294,11 +297,11 @@ public class Rubikscube : MonoBehaviour
             int rand = Random.Range(0, 2);//forward, up, right
 
             if (rand == 1)
-                movingPlane = new Plane(tabCube[random].transform.up, tabCube[random].transform.up * Vector3.Dot(tabCube[random].transform.up, tabCube[random].transform.position));
+                movingPlane = new Plane(Vector3.up, Vector3.up * Vector3.Dot(Vector3.up, tabCube[random].transform.position));
             else if (rand == 2)
-                movingPlane = new Plane(tabCube[random].transform.forward, tabCube[random].transform.forward * Vector3.Dot(tabCube[random].transform.forward, tabCube[random].transform.position));
+                movingPlane = new Plane(Vector3.forward, Vector3.forward * Vector3.Dot(Vector3.forward, tabCube[random].transform.position));
             else
-                movingPlane = new Plane(tabCube[random].transform.right, tabCube[random].transform.right * Vector3.Dot(tabCube[random].transform.right, tabCube[random].transform.position));
+                movingPlane = new Plane(Vector3.right, Vector3.right * Vector3.Dot(Vector3.right, tabCube[random].transform.position));
 
             List<Quaternion> orientationQuaternion = new List<Quaternion>();
             orientationQuaternion.Add(Quaternion.AngleAxis(90.0f, movingPlane.normal));
@@ -307,12 +310,13 @@ public class Rubikscube : MonoBehaviour
 
             int orientationRand = Random.Range(0, orientationQuaternion.Count);
 
-            GetCubeFromPlane();
+            GetMovingFace();
 
             myRotatePoint.transform.rotation = orientationQuaternion[orientationRand];
 
             ClearParent();
         }
+        shuffle     = true;
     }
 
     #endregion
@@ -458,7 +462,7 @@ public class Rubikscube : MonoBehaviour
 
         haveRotatePointParent = false;
 
-        if (!completed)
+        if (!completed && shuffle)
             CheckCompleted();
     }
 
