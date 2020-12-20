@@ -238,7 +238,7 @@ public class Rubikscube : MonoBehaviour
         {
             foreach (GameObject comparedCube in tabCube)
             {
-                if (!(Vector3.Distance(cube.transform.forward, comparedCube.transform.forward) <= checkCompletedEpsilon))
+                if (!(Quaternion.Angle(cube.transform.rotation, comparedCube.transform.rotation) <= checkCompletedEpsilon))
                 {
                     completed = false;
                     return;

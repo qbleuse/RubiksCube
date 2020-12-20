@@ -133,13 +133,14 @@ ________
 As we saw above, thanks to our definition of a cube, the solve cube is a cube where all the smaller cube have the same rotation, so here is the method [CheckCompleted](RUBIKSCUBE/Assets/Scripts/Rubikscube.cs#231), that checks if the Rubiks Cube has been solved:
 
 ``` csharp
+
     void CheckCompleted()
     {
         foreach (GameObject cube in tabCube)
         {
             foreach (GameObject comparedCube in tabCube)
             {
-                if (!(Vector3.Distance(cube.transform.forward, comparedCube.transform.forward) <= checkCompletedEpsilon))
+                if (!(Quaternion.Angle(cube.transform.rotation, comparedCube.transform.rotation) <= checkCompletedEpsilon))
                 {
                     completed = false;
                     return;
@@ -149,10 +150,10 @@ As we saw above, thanks to our definition of a cube, the solve cube is a cube wh
 
         completed = true;
     }
+
 ```
 
-Fairly simple, once again. It just checks if the distance between the forward vectors of each cubes is greater than an epsilon, if it is, then at least one cube is not in the good rotation which means it is not solved.
-We could have checked between the angle of rotations, but the check is simpler with vectors.
+Fairly simple, once again. It just checks between the angle of rotations of each cubes is greater than an epsilon, if it is, then at least one cube is not in the good rotation which means it is not solved.
 Here is an example of what we can see in game:
 
 !["Cube Solved"](ScreenShots/Completed.gif)
