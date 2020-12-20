@@ -32,6 +32,7 @@ This project features:
 
 It appears that when the cube is been trying to be solved for a very long time,
 the cube dislocate itself for no apparent reason.
+This bugs seems to happen at construction sometimes too.
 The bug not being a simple one to reproduce, it has been left as it is.
 If it ever happens,
 we advice you to restart, and apology for the inconvenience.
@@ -112,7 +113,7 @@ Here is a portion of The method [CreateCube](RUBIKSCUBE/Assets/Scripts/Rubikscub
 		...
 ```
 
-It is a simple method that just spawn a cube if each coordinate is equal 0 or size, which means the nb of cube that we have is less than size x size x size, it is (8 [nb of corner cubes] + 12 [nb of edges of the cube] x (size - 2) + (size - 2)²).
+It is a simple method that just spawn a cube if each coordinate is equal 0 or size, which means the nb of cube that we have is less than size x size x size, it is (8 [nb of corner cubes] + 12 [nb of edges of the cube] x (size - 2) + 6 x (size - 2)²).
 With that we get this result :
 
 !["Creation Cube"](ScreenShots/CreationCube.png)
@@ -252,3 +253,287 @@ ___
 
 ### **_Cube Face Rotation_**
 
+A Rubiks Cube wouldn't be a Rubiks Cube if you cannot rotate the faces to try to solve it,
+so it is the main Mechanic of the game here, it needs to be done well.
+
+With the goal in mind a lot of thing needs to be done, let's view them through questions:
+
+#### _What is a face ?_
+
+In a real Rubiks Cube, a face are all cubes linked with a mechanism inside, which make clear what is a face : it is all the cubes you can rotate with one mechanism.
+
+But right now we have just a cube made of some other cubes, no mechanism makes clear what is a face.
+
+But if we consider the problem with a mathematical insight, all cubes that rotate on a real Rubiks Cube are always on a same plane, We can then consider that a face is the all the cubes that can rotate on the plane chosen.
+
+Leave the hard part : how do we choose this plane? let us see how it is done through code:
+
+Here is [GetGrabedFace](RUBIKSCUBE/Assets/Scripts/Rubikscube.cs#L358) method:
+
+```csharp
+
+   /* Get the face that user was pointing the mouse at when pressing 
+   left mouse button and create the ctrlPlane with it */
+    void GetGrabedFace()
+    {
+        leftHolding = true;
+        chooseRotatePlane = false;
+
+        //Create a ray from the Mouse click position
+        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+        RaycastHit hit;
+
+        if (Physics.Raycast(ray, out hit))
+        {
+            oldPoint    = hit.point;
+            grabedFace  = hit.collider.gameObject;
+            ctrlPlane   = new Plane(grabedFace.transform.forward, grabedFace.transform.forward * Vector3.Dot(grabedFace.transform.forward, grabedFace.transform.position));
+        }
+    }
+
+```
+
+This a method that get the face that the mouse was on when clicking, it sets a lot other variable when it does that but the most important is saving grabedFace, setting oldPoint and ctrlPlane.
+ctrlPlane is the Plane that the player will be moving his mouse on when rotating the face.
+
+The answer to the question above is to simply get at least one of the cube in the plan wanting to rotate and to do that we simply ask to the user: as in a real Rubiks Cube the user rotate the face with their hands, our users will rotate a face with their mouse.
+
+Now that we have a face we have limited the choice to three planes: the plane that will rotate the cube on this forward vector, the right vector or the up vector.
+
+leaving the choice to three rotation will be ot complicated so we limit to two of them :
+the up vector and the right vector.
+
+Here is [ChooseMovingFace](RUBIKSCUBE/Assets/Scripts/Rubikscube.cs#L375) method:
+
+```csharp
+    bool ChooseMovingFace()
+    {
+        //Create a ray from the Mouse click position
+        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+        RaycastHit hit;
+
+        if (Physics.Raycast(ray, out hit))
+        {
+            Vector3 grabDist = (hit.point - oldPoint);
+            if (grabDist.sqrMagnitude >= (float)size * faceTurnSensibility)
+            {
+
+                oldPoint        = hit.point;
+                float upRate    = Mathf.Abs(Vector3.Dot(grabedFace.transform.up, grabDist));
+                float rightRate = Mathf.Abs(Vector3.Dot(grabedFace.transform.right, grabDist));
+
+
+                if (rightRate >= upRate)//if the user's mouse is more on the right axis then it is the up plane that moves
+                {
+                    movingPlane = new Plane(grabedFace.transform.up, grabedFace.transform.up * Vector3.Dot(grabedFace.transform.up, grabedFace.transform.position));
+                    return true;
+                }//else, if the user's mouse is more on the up axis, then the movingPlane is the right Plane
+
+                movingPlane = new Plane(grabedFace.transform.right, grabedFace.transform.right * Vector3.Dot(grabedFace.transform.right, grabedFace.transform.position));
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+```
+
+By limiting the Rubiks Cube's Face to two rotations, we can just wait and listened for the user to choose : the plane of the rotation will be on the cross product between the vector of direction of mouse ad the vector forward of the face,
+so basically if the mouse moves on the right axis,
+the face rotates on the up axis,
+otherwise if the mouse moves on the up axis,
+the face rotates on the right axis.
+
+And, with that, we have our face!
+
+#### _How do we rotate our face ?_
+
+Now, we have the plane that the cube rotates on but we still cannot rotate them, we need to get them.
+
+Here is the beginning of the [GetCubeFromPlane](RUBIKSCUBE/Assets/Scripts/Rubikscube.cs#L417) method:
+
+````csharp
+
+    /* method that populate movingCube after the movingPlane been chose and place my Rotate Point, to rotate those cubes*/
+    void GetCubeFromPlane()
+    {
+        foreach (GameObject gameObject in tabCube)
+        {
+            float distToPlane = movingPlane.GetDistanceToPoint(gameObject.transform.position);
+            if (distToPlane <= detectEpsilon && distToPlane >= -detectEpsilon)
+            {
+                movingCube.Add(gameObject);
+            }
+        }
+
+        ...
+
+````
+
+So to find them we check the distance to the plane, and put them in an array.
+We have two ways to work around it: we move and rotate each cube separately or we rotate a temporary parent of each cube.
+
+The first needs less variable but is more difficult to do, particularly the rotation that can give strange result as this example below:
+
+!["Bad Face rotation example"](ScreenShots/BadFaceRotation.PNG)
+
+So we decided to make the simpler one with a temporary parent, and thank you for your patience:
+this is what is "myRotatePoint".
+
+Here is the end of the  [GetCubeFromPlane](RUBIKSCUBE/Assets/Scripts/Rubikscube.cs#L417) method:
+
+````csharp
+
+        ...
+
+        
+        myRotatePoint.transform.position = Vector3.zero;
+        myRotatePoint.transform.rotation = Quaternion.identity;
+        foreach (GameObject cub in movingCube)
+        {
+            myRotatePoint.transform.position += cub.transform.position;
+        }
+
+        if (movingCube.Count != 0)
+            myRotatePoint.transform.position /= movingCube.Count;
+
+        foreach (GameObject cub in movingCube)
+        {
+            cub.transform.parent = myRotatePoint.transform;
+        }
+    }
+
+````
+
+We place the rotate point in the good place which is in the middle of all the cube, and we reset the rotation of the gameObject.
+
+Now that we've got all the cube we need to rotate them, so Here is the [MoveFace](RUBIKSCUBE/Assets/Scripts/Rubikscube.cs#L444):
+
+````csharp
+
+    void MoveFace()
+    {
+        Vector3 newPoint = Input.mousePosition;
+
+        float moveRate                      = Vector3.Dot(Vector3.Cross(ctrlPlane.normal, movingPlane.normal), (newPoint - oldPoint));
+        myRotatePoint.transform.rotation    = SimpleRotate(myRotatePoint.transform.rotation, movingPlane.normal, faceTurnSpeed * (1.0f / (float)size), moveRate);
+
+        oldPoint        = newPoint;
+    }
+
+````
+
+And Here is [SimpleRotate](RUBIKSCUBE/Assets/Scripts/Rubikscube.cs#L349) method:
+
+````csharp
+
+    Quaternion SimpleRotate(Quaternion inOrientation, Vector3 rotateAxis, float rotateAngle, float slerpComponent = 1.0f)
+    {
+        Quaternion rotate = Quaternion.AngleAxis(rotateAngle, rotateAxis);
+        rotate = Quaternion.SlerpUnclamped(Quaternion.identity, rotate, Time.deltaTime * slerpComponent);
+
+        return inOrientation * rotate;
+    }
+
+````
+
+Basically, we just multiplicate by a rotation that is of a fixed angle and slerp with the deltaTime and the dot product of the movement of mouse (which gives the direction of rotation).
+
+Finally, We are good to rotate the face of our cube, Here we go: 
+
+!["Quaternion Imprecision"](ScreenShots/QuaternionImprecision.png)
+
+Hooray...?
+
+!["No Animation Rotate"](ScreenShots/NoAnimationRotation.png)
+
+!["No Animation Rotate"](ScreenShots/NoAnimationRotate.png)
+
+I don't think we can even call this a Rubiks Cube anymore...
+
+Well, that is disappointing... but it illustrates well some problem:
+
+1. _We need to have quaternions with value we know, otherwise it will dislocate itself after few rotations._
+
+2. _We need our rotations to be a multiple of pi/2 before making another rotation otherwise the cubes are going to drift away for a normal position._
+
+We are going to do this with an animation (or more so a coroutine).
+
+Here is the [SetBackProperly](RUBIKSCUBE/Assets/Scripts/Rubikscube.cs#L499) method:
+
+````csharp
+
+    IEnumerator SetBackProperly()
+    {
+        Quaternion properOrientation    = GetProperOrientation();
+        animRunning                     = true;
+
+        /* Slerp until between wanted rot and current rot is below epsilon */
+        while (Quaternion.Angle(myRotatePoint.transform.rotation, properOrientation) >= animFinishedEpsilon)
+        {
+            myRotatePoint.transform.rotation = Quaternion.Slerp(myRotatePoint.transform.rotation, properOrientation, animTurnSpeed * 1.0f / (float)size * Time.deltaTime);
+
+            yield return null;
+        }
+
+        myRotatePoint.transform.rotation = properOrientation;//then force the rotation to avoid drifting by quaternion.
+
+        animRunning = false;
+        ClearParent();//the movement is considered finished only when anim is finished
+
+        yield break;
+    }
+
+````
+
+This coroutine will disable any rotation of the user until it is finished and it slerp until it is close enough to the wanted orientation then affect it.
+
+The fact it is a coroutine is just for the user to see what is being done which is make the face rotate to an orientation allowed, what we want is just the orientation to be one of the ones allowed, and this shows it.
+
+It acts a bit like the mechanism inside a real Rubiks Cube that could not rotate if a face is not parallel with the other.
+
+Let us see [GetProperOrientation](RUBIKSCUBE/Assets/Scripts/Rubikscube.cs#L474) method to understand fully how it works:
+
+````csharp
+
+    Quaternion GetProperOrientation()
+    {
+        /* list all possible rotation for the face */
+        List<Quaternion> orientationQuaternion = new List<Quaternion>();
+        orientationQuaternion.Add(Quaternion.identity);
+        orientationQuaternion.Add(Quaternion.AngleAxis(90.0f, movingPlane.normal));
+        orientationQuaternion.Add(Quaternion.AngleAxis(-90.0f, movingPlane.normal));
+        orientationQuaternion.Add(Quaternion.AngleAxis(180.0f, movingPlane.normal));
+
+        Quaternion returnQuat   = Quaternion.identity;
+        float angle             = float.MaxValue;
+
+        foreach (Quaternion quaternion in orientationQuaternion)
+        {
+            float newAngle = Quaternion.Angle(myRotatePoint.transform.rotation, quaternion);
+            if (newAngle < angle)/* check for smallest angle between possible rotation and current one*/
+            {
+                angle       = newAngle;
+                returnQuat  = quaternion;
+            }
+        }
+
+        return returnQuat;
+    }
+
+````
+
+We compare the angle between the rotation that the user has done and proper rotations which are 0, pi/2 pi and -pi/2 on the axis given, and choose the rotation with smallest angle out of them.
+
+We could have used the dot product to do so.
+
+And Finally! we have done it there it is:
+
+!["Good Face Rotate"](ScreenShots/RotateFace.gif)
+
+It was a long run but it work pretty well, if we don't count few bugs, and really helped to learn how to use quaternions.
+
+The code that we reviewed is just the core of how it works you can also see how the UI works in the [UIManager.cs](RUBIKSCUBE/Assets/Scripts/UIManager.cs) file, or see how the whole Rubiks Cube system works in the [Rubiks.cs](RUBIKSCUBE/Assets/Scripts/RubiksCube.cs) file.
+
+Thank you for reading, and have fun !

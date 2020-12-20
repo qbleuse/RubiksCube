@@ -72,7 +72,7 @@ public class Rubikscube : MonoBehaviour
     //the list of cube moving when user is holding
     private List<GameObject> movingCube;
 
-    private bool rightHolding = false;
+    private bool leftHolding = false;
 
     private GameObject grabedFace = null;
 
@@ -209,7 +209,7 @@ public class Rubikscube : MonoBehaviour
         previousMousePos                = Input.mousePosition;
 
         chooseRotatePlane   = false;
-        rightHolding        = false;
+        leftHolding        = false;
     }
 
     void Zoom()
@@ -326,7 +326,7 @@ public class Rubikscube : MonoBehaviour
 
     void MovingFaceBehavior()
     {
-        if (!rightHolding)// if right mouse button just been pressed get 
+        if (!leftHolding)// if right mouse button just been pressed get 
         {
             GetGrabedFace();
         }
@@ -354,10 +354,10 @@ public class Rubikscube : MonoBehaviour
         return inOrientation * rotate;
     }
 
-    /* Get the face that user was pointing the mouse at when pressing right mouse button and create the ctrlPlane with it */
+    /* Get the face that user was pointing the mouse at when pressing left mouse button and create the ctrlPlane with it */
     void GetGrabedFace()
     {
-        rightHolding = true;
+        leftHolding = true;
         chooseRotatePlane = false;
 
         //Create a ray from the Mouse click position
@@ -473,7 +473,7 @@ public class Rubikscube : MonoBehaviour
 
     Quaternion GetProperOrientation()
     {
-        /* list all possible roation for the face */
+        /* list all possible rotation for the face */
         List<Quaternion> orientationQuaternion = new List<Quaternion>();
         orientationQuaternion.Add(Quaternion.identity);
         orientationQuaternion.Add(Quaternion.AngleAxis(90.0f, movingPlane.normal));
