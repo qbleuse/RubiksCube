@@ -136,11 +136,11 @@ Here is a portion of The method [CreateCube](RUBIKSCUBE/Assets/Scripts/Rubikscub
 It is a simple method that just spawn a cube if each coordinate is equal 0 or size, which means the nb of cube that we have is less than size x size x size, it is (8 [nb of corner cubes] + 12 [nb of edges of the cube] x (size - 2) + 6 x (size - 2)²).
 With that we get this result :
 
-!["Creation Cube"](ScreenShots/CreationCube.png)
+!["Creation Cube"](Screenshots/CreationCube.png)
 
 And when we changed the size we get that:
 
-!["Size Changing"](ScreenShots/reloadCube.gif)
+!["Size Changing"](Screenshots/reloadCube.gif)
 
 we have less cube than with a simple one with this method which is always appreciated and we have a cube!
 Note that by having no rotation applied to the cube the cube is already solved.
@@ -176,7 +176,7 @@ As we saw above, thanks to our definition of a cube, the solve cube is a cube wh
 Fairly simple, once again. It just checks between the angle of rotations of each cubes is greater than an epsilon, if it is, then at least one cube is not in the good rotation which means it is not solved.
 Here is an example of what we can see in game:
 
-!["Cube Solved"](ScreenShots/Completed.gif)
+!["Cube Solved"](Screenshots/Completed.gif)
 
 ___
 
@@ -268,7 +268,7 @@ Once again, simple method, just moving the camera on the z axis with limitation.
 
 Here is the Zoom in game:
 
-!["Zoom Cube"](ScreenShots/zoomGif.gif)
+!["Zoom Cube"](Screenshots/zoomGif.gif)
 
 ___
 
@@ -397,7 +397,7 @@ We have two ways to work around it: we move and rotate each cube separately or w
 
 The first needs less variable but is more difficult to do, particularly the rotation that can give strange result as this example below:
 
-!["Bad Face rotation example"](ScreenShots/BadFaceRotation.PNG)
+!["Bad Face rotation example"](Screenshots/BadFaceRotation.PNG)
 
 So we decided to make the simpler one with a temporary parent, and thank you for your patience:
 this is what is "myRotatePoint".
@@ -463,13 +463,13 @@ Basically, we just multiplicate by a rotation that is of a fixed angle and slerp
 
 Finally, We are good to rotate the face of our cube, Here we go: 
 
-!["Quaternion Imprecision"](ScreenShots/QuaternionImprecision.png)
+!["Quaternion Imprecision"](Screenshots/QuaternionImprecision.png)
 
 Hooray...?
 
-!["No Animation Rotate"](ScreenShots/NoAnimationRotation.png)
+!["No Animation Rotate"](Screenshots/NoAnimationRotation.png)
 
-!["No Animation Rotate"](ScreenShots/NoAnimationRotate.png)
+!["No Animation Rotate"](Screenshots/NoAnimationRotate.png)
 
 I don't think we can even call this a Rubiks Cube anymore...
 
@@ -551,7 +551,7 @@ We could have used the dot product to do so.
 
 And Finally! we have done it there it is:
 
-!["Good Face Rotate"](ScreenShots/RotateFace.gif)
+!["Good Face Rotate"](Screenshots/RotateFace.gif)
 
 It was a long run but it work pretty well, if we don't count few bugs, and really helped to learn how to use quaternions.
 
