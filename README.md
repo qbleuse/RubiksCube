@@ -1,21 +1,33 @@
 # **_RubiksCube_**
 
+This project is a school project consisting in developing a Rubiks Cube in Unity,
+with the goal of using Quaternions and not using transform's rotation.
+
+___
+
+## **Authors**
+
+![Isart](Screenshots/isart.png)
+
+The project has been developed as a school assignment of ISART Digital the project is then theirs and the authors property.
+
 By: Theo RITOUNI and Quentin BLEUSE
 
 Released the : 20/12/2020
 
-## **Description**
-
-This project consist in developing a Rubiks Cube in Unity,
-with the goal of using Quaternions and not using transform's rotation.
+___
 
 ## **How To Build**
 
 As the project is made on Unity, you can build the project using Unity (the project runs on Unity 2019.4.14.f1)  and rebuild the project using unity's build system. Or...
 
+___
+
 ## **How To Run**
 
 You can run the already available build in the Build/ folder by simply double clicking on it.
+
+___
 
 ## **Features**
 
@@ -30,6 +42,8 @@ This project features:
 - Screenshots/ folder with all the gif and images use to illustrate this readme
 - a build in the Build/ folder
 
+___
+
 ## **Known Bugs**
 
 It appears that when the cube is been trying to be solved for a very long time,
@@ -39,15 +53,19 @@ The bug not being a simple one to reproduce, it has been left as it is.
 If it ever happens,
 we advice you to restart, and apology for the inconvenience.
 
-## **Techniques Used**
+___
+
+## **Techs**
 
 - C# (as everything has been written on C#, but some specifics like Coroutines too)
 - Unity's Quaternion, Vector and Plane struct.
 
+___
+
 ## **Presentation**
 
 Here is a presentation of how the project has been made, the problematic and how we solved them.
-Each Section will be about how to implement one the feature listed above, except all of the UI features.
+Each Section will be about how to implement one the feature listed above, except all of the UI features. This was a graded document for school, I leave it here as you may be interested in reading it.
 
 ### **_Table Of Content:_**
 
