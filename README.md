@@ -268,7 +268,7 @@ Once again, simple method, just moving the camera on the z axis with limitation.
 
 Here is the Zoom in game:
 
-!["Zoom Cube"](Screenshots/zoomGif.gif)
+!["Zoom Cube"](Screenshots/ZoomGif.gif)
 
 ___
 
