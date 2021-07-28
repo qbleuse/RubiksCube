@@ -239,7 +239,7 @@ We choose the axis with the movement of the mouse between two frames and we rota
 
 Here is the result:
 
-!["Rotate Cube"](ScreenShots/rotateGif.gif)
+!["Rotate Cube"](Screenshots/rotateGif.gif)
 
 Another reason to rotate the cube and not the camera is to make the zoom by changing just the coordinate of the position of the camera on an axis.
 Here is the [Zoom](RUBIKSCUBE/Assets/Scripts/Rubikscube.cs#L215):
