@@ -9,7 +9,7 @@ ___
 
 ![Isart](Screenshots/isart.png)
 
-The project has been developed as a school assignment of ISART Digital the project is then theirs and the authors property.
+The project has been developed as a school assignment of ISART Digital, the project is then theirs and the authors property.
 
 By: Theo RITOUNI and Quentin BLEUSE
 
